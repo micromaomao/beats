@@ -18,13 +18,45 @@ let store = createStore(function (state, action) {
       if (state.scene === 'free-mode') {
         let fm = state.freeMode
         if (fm.startTime === null) {
-          fm.startTime = new Date().getTime()
+          fm.startTime = Date.now()
           fm.userInputBlocks.push(0)
           return state
         } else if (fm.blocks.length === 0) {
-          fm.userInputBlocks.push(new Date().getTime() - fm.startTime)
+          fm.userInputBlocks.push(Date.now() - fm.startTime)
+          if (fm.userInputBlocks.length >= userInputNumber) {
+            let periods = new Array(fm.userInputBlocks.length - 1)
+            for (let i = 0; i < fm.userInputBlocks.length - 1; i ++) {
+              periods[i] = fm.userInputBlocks[i + 1] - fm.userInputBlocks[i]
+            }
+            let mean = periods.reduce((a, b) => a + b) / periods.length
+            let roundedMean = Math.round(mean / 125) * 125
+            if (Math.abs(roundedMean - mean) < 50) mean = roundedMean
+            fm.periods = [mean, mean, mean, mean]
+            return state
+          }
           return state
         }
+      }
+      return state
+    case 'fm-generate-blocks':
+      let fm = state.freeMode
+      if (!fm || !fm.periods) return state
+      let lastBlockTime = null
+      if (fm.blocks.length > 0) {
+        lastBlockTime = fm.blocks[fm.blocks.length - 1].t
+      } else if (fm.userInputBlocks.length > 0) {
+        lastBlockTime = fm.userInputBlocks[fm.userInputBlocks.length - 1]
+      }
+      let lastBlockAppearTime = 0
+      if (fm.blocks.length > 0) {
+        lastBlockAppearTime = fm.blocks[fm.blocks.length - 1].appearTime
+      }
+      let appearTime = Math.max(Date.now(), lastBlockAppearTime)
+      for (let p of fm.periods) {
+        let nT = lastBlockTime + p
+        fm.blocks.push({t: nT, appearTime})
+        appearTime += 50
+        lastBlockTime = nT
       }
       return state
     default: return state
@@ -36,6 +68,7 @@ function freeModeInit () {
   return {
     userInputBlocks: [],
     blocks: [],
+    periods: null,
     startTime: null
   }
 }
@@ -93,5 +126,19 @@ function init (obj) {
 function handleTap ({x, y}) {
   store.dispatch({type: 'tap', x, y})
 }
+
+function gameCheck () {
+  let st = store.getState()
+  if (st.scene === 'free-mode') {
+    let fm = st.freeMode
+    if (fm && fm.periods !== null && fm.blocks.length < 6) {
+      store.dispatch({type: 'fm-generate-blocks'})
+    }
+    if (fm && fm.periods !== null) {
+      setTimeout(gameCheck, fm.periods[0] / 2)
+    }
+  }
+}
+store.subscribe(gameCheck)
 
 export {store, draw, init, handleTap as onTap}

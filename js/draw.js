@@ -35,7 +35,7 @@ const blocksHalfWidth = 5
 const blocksHalfHeight = 30
 function updateFreeMode ({nextFrame, redraw, lastDrawState, state}) {
   let {width, height} = ctx.canvas
-  let now = new Date().getTime()
+  let now = Date.now()
   let timeBase = (200 + width * 0.1) / 1000 // pixel / ms
   let startTime = state.freeMode.startTime
   if (startTime === null) {
@@ -109,6 +109,25 @@ function updateFreeMode ({nextFrame, redraw, lastDrawState, state}) {
       ctx.fill(userBlockPath)
     ctx.restore()
     perviousBlockPaths.push(userBlockPath)
+
+    let blockperiod = 200
+    if (fm.periods && fm.periods.length > 0) {
+      blockperiod = fm.periods[fm.periods.length - 1]
+    }
+    ctx.save()
+      ctx.strokeStyle = 'transparent'
+      ctx.lineWidth = 0
+      ctx.fillStyle = '#fb2e01'
+      for (let b of fm.blocks) {
+        let x = b.t * timeBase - xOffset + midX
+        if (x < 0 || x >= width) continue
+        let blockPath = new Path2D()
+        blockPath.rect(x - blocksHalfWidth, blocksY - blocksHalfHeight, blocksHalfWidth * 2, blocksHalfHeight * 2)
+        ctx.globalAlpha = Math.max(Math.min(1, (now - b.appearTime) / blockperiod), 0)
+        ctx.fill(blockPath)
+        perviousBlockPaths.push(blockPath)
+      }
+    ctx.restore()
   }
 }
 
