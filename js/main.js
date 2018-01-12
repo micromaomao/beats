@@ -2,7 +2,7 @@
 
 require('babel-polyfill')
 
-import { init as stateInit, store, draw } from './state.js'
+import { init as stateInit, store, draw, onTap as stateTapHandler } from './state.js'
 let state = store
 
 function readFromLocalStorage () {
@@ -53,3 +53,8 @@ state.subscribe(() => {
 state.dispatch({type: 'init'})
 
 handleResize()
+
+document.addEventListener('mousedown', evt => {
+  evt.preventDefault()
+  stateTapHandler({x: evt.clientX, y: evt.clientY})
+})
