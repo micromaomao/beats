@@ -1,0 +1,23 @@
+doctype html
+
+html
+  head
+    meta(name="viewport", content="width=device-width, initial-scale=1, user-scalable=no")
+    meta(charset="utf-8")
+    // meta(name="theme-color",content="#ff5722")
+    // link(rel="manifest", href=mf.manifest)
+    // each icon in mf.icons
+    //   link(rel='icon', size=icon.sizes, type=icon.type, href=icon.src)
+    // link(rel="apple-touch-icon", href=require('./res/icon-apple.png'))
+    // meta(name="apple-mobile-web-app-title", content="Beat")
+    // meta(name="apple-mobile-web-app-capable", content="yes")
+    // meta(property="og:image", content='')
+    // meta(property="og:image:type", content=mf.icons[0].type)
+    // -let ogSz = mf.icons[0].sizes.split('x')
+    // meta(property="og:image:width", content=ogSz[0])
+    // meta(property="og:image:height", content=ogSz[1])
+    meta(property="og:type", content="website")
+    meta(property="og:locale", content="en_GB")
+  body
+    each js in htmlWebpackPlugin.files.js
+      script(src=js, async)
