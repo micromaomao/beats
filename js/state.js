@@ -123,7 +123,7 @@ let store = createStore(function (state, action) {
 window.AppState = store
 
 function draw () {
-  if (window.performance) {
+  if (window.performance && performance.mark) {
     performance.mark('main-draw-begin')
   }
   try {
@@ -132,7 +132,7 @@ function draw () {
     let updateArgs = {nextFrame, state: st}
     return void drawUpdate(updateArgs)
   } finally {
-    if (!window.performance) return
+    if (!window.performance || !performance.mark) return
     performance.mark('main-draw-end')
     performance.measure('Main draw', 'main-draw-begin', 'main-draw-end')
     performance.clearMarks()
