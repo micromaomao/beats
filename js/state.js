@@ -2,7 +2,16 @@ import { createStore } from 'redux'
 import { init as drawInit, update as drawUpdate } from './draw.js'
 
 // I know I shouldn't alter existing state objects, but I still do so for performance.
-const userInputNumber = 4
+const userInputNumber = 8
+const freeModeInit = {
+  userInputBlocks: [],
+  blocks: [],
+  periods: null,
+  startTime: null,
+  stopTime: null,
+  lastTap: null,
+  periodDeterminedTime: null
+}
 let store = createStore(function (state, action) {
   console.log(action)
   switch (action.type) {
@@ -10,15 +19,12 @@ let store = createStore(function (state, action) {
       return {
         scene: 'free-mode',
         score: 0,
-        freeMode: {
+        showInitScreen: true,
+        maxScore: action.maxScore || 0,
+        freeMode: Object.assign({}, freeModeInit, {
           userInputBlocks: [],
-          blocks: [],
-          periods: null,
-          startTime: null,
-          stopTime: null,
-          lastTap: null,
-          periodDeterminedTime: null
-        }
+          blocks: []
+        })
       }
     case 'repaint': return state
     case 'tap':
@@ -37,15 +43,15 @@ let store = createStore(function (state, action) {
             }
             let mean = periods.reduce((a, b) => a + b) / periods.length
             let roundedMean = Math.round(mean / 125) * 125
-            if (Math.abs(roundedMean - mean) < 50) mean = roundedMean
+            if (Math.abs(roundedMean - mean) < 10) mean = roundedMean
             fm.periods = [mean, mean, mean, mean]
             fm.periodDeterminedTime = Date.now()
             return state
           }
           return state
         } else if (fm.blocks.length > 0 && fm.stopTime === null) {
-          let firstBlock = fm.blocks[0]
-          let gameTime = Date.now() - fm.startTime
+        let firstBlock = fm.blocks[0]
+        let gameTime = Date.now() - fm.startTime
           let devid = Math.abs(firstBlock.t - gameTime)
           if (devid < firstBlock.tWidth) {
             let [tappedBlock] = fm.blocks.splice(0, 1)
@@ -56,6 +62,7 @@ let store = createStore(function (state, action) {
               block: tappedBlock
             }
             state.score += Math.floor(Math.pow(2, 1 - 2.5 * (devid / firstBlock.tWidth - 0.9)))
+            if (state.score > state.maxScore) state.maxScore = state.score
             return state
           } else {
             fm.stopTime = Date.now()
@@ -65,6 +72,14 @@ let store = createStore(function (state, action) {
               successful: false
             }
           }
+        } else if (fm.stopTime !== null) {
+          state.showInitScreen = false
+          state.score = 0
+          state.freeMode = Object.assign({}, freeModeInit, {
+            startTime: Date.now(),
+            userInputBlocks: [0],
+            blocks: []
+          })
         }
       }
       return state
@@ -88,7 +103,7 @@ let store = createStore(function (state, action) {
         let appearTime = Math.max(Date.now(), lastBlockAppearTime)
         for (let p of fm.periods) {
           let nT = lastBlockTime + p
-          fm.blocks.push({t: nT, appearTime, tWidth: lastBlockTWidth * (5/6)})
+          fm.blocks.push({t: nT, appearTime, tWidth: lastBlockTWidth * (19/20)})
           appearTime += 50
           lastBlockTime = nT
         }

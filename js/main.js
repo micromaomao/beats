@@ -43,6 +43,8 @@ let drawFrame = null
 let context = canvas.getContext('2d')
 stateInit({context})
 state.subscribe(() => {
+  let localMaxScore = parseInt(localStorage.getItem('maxScore')) || 0
+  localStorage.setItem('maxScore', Math.max(localMaxScore, state.getState().maxScore))
   if (drawFrame === null) {
     drawFrame = requestAnimationFrame(() => {
       drawFrame = null
@@ -50,7 +52,7 @@ state.subscribe(() => {
     })
   }
 })
-state.dispatch({type: 'init'})
+state.dispatch({type: 'init', maxScore: parseInt(localStorage.getItem('maxScore') || 0)})
 
 handleResize()
 

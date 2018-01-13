@@ -22,12 +22,12 @@ function handleResize () {
   freeModeBackground = ctx.createLinearGradient(0, 0, 0, height)
   freeModeBackground.addColorStop(0, '#fffeb3')
   freeModeBackground.addColorStop(1, '#ffe28a')
-  textGradiant = ctx.createLinearGradient(0, textY, 0, textHeight)
-  textGradiant.addColorStop(0, '#666547')
-  textGradiant.addColorStop(1, '#fb2e01')
-  secIndicaterY = height * (2/3)
-  blocksY = height * (1/3)
   textY = height / 8
+  blocksY = height * (1/3)
+  textGradiant = ctx.createLinearGradient(0, textY, 0, blocksY)
+  textGradiant.addColorStop(0, '#fb2e01')
+  textGradiant.addColorStop(1, '#fc6c4d')
+  secIndicaterY = height * (2/3)
   lastSize = {width, height}
   needClearAll = true
 }
@@ -188,6 +188,8 @@ function update ({nextFrame, state}) {
 
     if (fm.periodDeterminedTime !== null) {
       let prog = Math.max(0, Math.min(1, (Date.now() - fm.periodDeterminedTime) / 300))
+      let stopProg = Math.min(1, stopTimePass / 300)
+      if (stopProg > 0) needClearAll = true
       ctx.save()
         ctx.fillStyle = textGradiant
         ctx.globalAlpha = prog
@@ -196,8 +198,45 @@ function update ({nextFrame, state}) {
         ctx.font = `${textHeight / 2 / 2}px sans-serif`
         ctx.fillText(`${Math.round(1 / (fm.periods[0] / 1000) * 10) / 10} Hz (${Math.round(60000 / fm.periods[0] * 10) / 10} / min)`, width / 2, textY + textHeight / 2, width)
         ctx.textBaseline = 'top'
-        ctx.font = `${textHeight / 2}px sans-serif`
-        ctx.fillText(state.score, width / 2, textY + textHeight / 2, width)
+        ctx.font = `${textHeight / 2 + stopProg * 40}px sans-serif`
+        ctx.fillText(state.score, width / 2, textY + textHeight / 2 + stopProg * 40, width)
+      ctx.restore()
+    }
+
+    if (state.showInitScreen && (fm.userInputBlocks.length === 0 || now - startTime < 300)) {
+      needClearAll = true
+      let prog = 0
+      if (startTime !== null) prog = Math.min(1, (now - startTime) / 300)
+      ctx.save()
+        ctx.fillStyle = '#000'
+        ctx.globalAlpha = 0.7 * (1 - prog)
+        ctx.fillRect(0, 0, width, height)
+        ctx.globalAlpha = (1 - prog)
+        ctx.fillStyle = '#fff'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.font = '24px sans-serif'
+        ctx.fillText("Click / Tap anywhere to start.", width / 2, height / 2, width)
+        ctx.textBaseline = 'top'
+        ctx.fillText("Best score: " + state.maxScore, width / 2, height / 2 + 10, width)
+        ctx.font = '50px serif'
+        ctx.fillText('Beats', width / 2, height / 3)
+      ctx.restore()
+    }
+
+    if (stopTime !== null) {
+      needClearAll = true
+      let prog = Math.min(1, stopTimePass / 300)
+      ctx.save()
+        ctx.fillStyle = textGradiant
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.font = '20px sans-serif'
+        ctx.globalAlpha = prog
+        ctx.fillText('Click / Tap anywhere to play again.', width / 2, (blocksY + secIndicaterY) / 2, width)
+        ctx.textBaseline = 'top'
+        ctx.font = '18px sans-serif'
+        ctx.fillText(`Best score: ${state.maxScore}`, width / 2, (blocksY + secIndicaterY) / 2 + 5, width)
       ctx.restore()
     }
   }
