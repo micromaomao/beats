@@ -46,3 +46,11 @@ document.addEventListener('mousedown', evt => {
   evt.preventDefault()
   stateTapHandler({x: evt.clientX, y: evt.clientY})
 })
+document.addEventListener('touchstart', evt => {
+  evt.preventDefault()
+  let touches = evt.touches
+  if (touches.length === 1) {
+    let t = touches[0]
+    stateTapHandler({x: t.clientX, y: t.clientY})
+  }
+})
