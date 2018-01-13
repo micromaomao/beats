@@ -1,5 +1,5 @@
 import { createStore } from 'redux'
-import { init as drawInit, drawFreeMode, updateFreeMode } from './draw.js'
+import { init as drawInit, update as drawUpdate } from './draw.js'
 
 // I know I shouldn't alter existing state objects, but I still do so for performance.
 const userInputNumber = 4
@@ -11,9 +11,7 @@ let store = createStore(function (state, action) {
         scene: 'free-mode',
         freeMode: freeModeInit()
       }
-    case 'repaint':
-      redraw()
-      return state
+    case 'repaint': return state
     case 'tap':
       if (state.scene === 'free-mode') {
         let fm = state.freeMode
@@ -21,7 +19,7 @@ let store = createStore(function (state, action) {
           fm.startTime = Date.now()
           fm.userInputBlocks.push(0)
           return state
-        } else if (fm.blocks.length === 0) {
+        } else if (fm.periods === null) {
           fm.userInputBlocks.push(Date.now() - fm.startTime)
           if (fm.userInputBlocks.length >= userInputNumber) {
             let periods = new Array(fm.userInputBlocks.length - 1)
@@ -35,28 +33,61 @@ let store = createStore(function (state, action) {
             return state
           }
           return state
+        } else if (fm.blocks.length > 0 && fm.stopTime === null) {
+          let firstBlock = fm.blocks[0]
+          let gameTime = Date.now() - fm.startTime
+          if (Math.abs(firstBlock.t - gameTime) < firstBlock.tWidth) {
+            let [tappedBlock] = fm.blocks.splice(0, 1)
+            fm.lastTap = {
+              t: Date.now(),
+              gt: gameTime,
+              successful: true,
+              block: tappedBlock
+            }
+            return state
+          } else {
+            fm.stopTime = Date.now()
+            fm.lastTap = {
+              t: Date.now(),
+              gt: gameTime,
+              successful: false
+            }
+          }
         }
       }
       return state
     case 'fm-generate-blocks':
-      let fm = state.freeMode
-      if (!fm || !fm.periods) return state
-      let lastBlockTime = null
-      if (fm.blocks.length > 0) {
-        lastBlockTime = fm.blocks[fm.blocks.length - 1].t
-      } else if (fm.userInputBlocks.length > 0) {
-        lastBlockTime = fm.userInputBlocks[fm.userInputBlocks.length - 1]
+      if (state.scene === 'free-mode') {
+        let fm = state.freeMode
+        if (!fm || !fm.periods) return state
+        let lastBlockTime = null
+        if (fm.blocks.length > 0) {
+          lastBlockTime = fm.blocks[fm.blocks.length - 1].t
+        } else if (fm.userInputBlocks.length > 0) {
+          lastBlockTime = fm.userInputBlocks[fm.userInputBlocks.length - 1]
+        }
+        let lastBlockAppearTime = 0
+        let lastBlockTWidth = 150
+        if (fm.blocks.length > 0) {
+          let lastBlock = fm.blocks[fm.blocks.length - 1]
+          lastBlockAppearTime = lastBlock.appearTime
+          lastBlockTWidth = lastBlock.tWidth
+        }
+        let appearTime = Math.max(Date.now(), lastBlockAppearTime)
+        for (let p of fm.periods) {
+          let nT = lastBlockTime + p
+          fm.blocks.push({t: nT, appearTime, tWidth: lastBlockTWidth * (5/6)})
+          appearTime += 50
+          lastBlockTime = nT
+        }
       }
-      let lastBlockAppearTime = 0
-      if (fm.blocks.length > 0) {
-        lastBlockAppearTime = fm.blocks[fm.blocks.length - 1].appearTime
-      }
-      let appearTime = Math.max(Date.now(), lastBlockAppearTime)
-      for (let p of fm.periods) {
-        let nT = lastBlockTime + p
-        fm.blocks.push({t: nT, appearTime})
-        appearTime += 50
-        lastBlockTime = nT
+      return state
+    case 'first-block-miss':
+      if (state.scene === 'free-mode') {
+        let fm = state.freeMode
+        if (!fm || fm.blocks.length === 0) return state
+        fm.stopTime = Date.now()
+        fm.blocks[0].missed = true
       }
       return state
     default: return state
@@ -69,43 +100,26 @@ function freeModeInit () {
     userInputBlocks: [],
     blocks: [],
     periods: null,
-    startTime: null
+    startTime: null,
+    stopTime: null,
+    lastTap: null
   }
 }
 
-let lastDrawState = null
 function draw () {
   if (window.performance) {
     performance.mark('main-draw-begin')
   }
   try {
     if (!store.getState()) return void nextFrame()
-    if (lastDrawState === null) {
-      return void redraw()
-    }
     let st = store.getState()
-    let updateArgs = {nextFrame, redraw, lastDrawState, state: st}
-    if (lastDrawState.scene === st.scene) {
-      if (st.scene === 'free-mode') return void updateFreeMode(updateArgs)
-      return void redraw()
-    }
+    let updateArgs = {nextFrame, state: st}
+    return void drawUpdate(updateArgs)
   } finally {
     if (!window.performance) return
     performance.mark('main-draw-end')
     performance.measure('Main draw', 'main-draw-begin', 'main-draw-end')
     performance.clearMarks()
-  }
-}
-
-function redraw () {
-  let st = store.getState()
-  lastDrawState = st
-  let drawArgs = {nextFrame, state: st}
-  // TODO: catch exceptions
-  switch (st.scene) {
-    case 'free-mode':
-      return void drawFreeMode(drawArgs)
-    default: return void console.error(`Unknow scene ${st.scene}`)
   }
 }
 
@@ -129,10 +143,20 @@ function handleTap ({x, y}) {
 
 function gameCheck () {
   let st = store.getState()
+  let now = Date.now()
   if (st.scene === 'free-mode') {
     let fm = st.freeMode
-    if (fm && fm.periods !== null && fm.blocks.length < 6) {
-      store.dispatch({type: 'fm-generate-blocks'})
+    if (fm && fm.stopTime === null) {
+      if (fm && fm.periods !== null) {
+        if (fm.blocks.length < 6) {
+          store.dispatch({type: 'fm-generate-blocks'})
+        }
+        let firstBlock = fm.blocks[0]
+        let gameTime = now - fm.startTime
+        if (firstBlock.t < gameTime - firstBlock.tWidth) {
+          store.dispatch({type: 'first-block-miss'})
+        }
+      }
     }
     if (fm && fm.periods !== null) {
       setTimeout(gameCheck, fm.periods[0] / 2)
