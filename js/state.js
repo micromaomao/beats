@@ -9,7 +9,16 @@ let store = createStore(function (state, action) {
     case 'init':
       return {
         scene: 'free-mode',
-        freeMode: freeModeInit()
+        score: 0,
+        freeMode: {
+          userInputBlocks: [],
+          blocks: [],
+          periods: null,
+          startTime: null,
+          stopTime: null,
+          lastTap: null,
+          periodDeterminedTime: null
+        }
       }
     case 'repaint': return state
     case 'tap':
@@ -30,13 +39,15 @@ let store = createStore(function (state, action) {
             let roundedMean = Math.round(mean / 125) * 125
             if (Math.abs(roundedMean - mean) < 50) mean = roundedMean
             fm.periods = [mean, mean, mean, mean]
+            fm.periodDeterminedTime = Date.now()
             return state
           }
           return state
         } else if (fm.blocks.length > 0 && fm.stopTime === null) {
           let firstBlock = fm.blocks[0]
           let gameTime = Date.now() - fm.startTime
-          if (Math.abs(firstBlock.t - gameTime) < firstBlock.tWidth) {
+          let devid = Math.abs(firstBlock.t - gameTime)
+          if (devid < firstBlock.tWidth) {
             let [tappedBlock] = fm.blocks.splice(0, 1)
             fm.lastTap = {
               t: Date.now(),
@@ -44,6 +55,7 @@ let store = createStore(function (state, action) {
               successful: true,
               block: tappedBlock
             }
+            state.score += Math.floor(Math.pow(2, 1 - 2.5 * (devid / firstBlock.tWidth - 0.9)))
             return state
           } else {
             fm.stopTime = Date.now()
@@ -94,17 +106,6 @@ let store = createStore(function (state, action) {
   }
 })
 window.AppState = store
-
-function freeModeInit () {
-  return {
-    userInputBlocks: [],
-    blocks: [],
-    periods: null,
-    startTime: null,
-    stopTime: null,
-    lastTap: null
-  }
-}
 
 function draw () {
   if (window.performance) {

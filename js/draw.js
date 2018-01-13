@@ -1,10 +1,6 @@
 let ctx = null
 let freeModeBackground = null
 let blocksY = 0, secIndicaterY = 0
-function init ({context}) {
-  ctx = context
-  handleResize()
-}
 let lastSize = null
 let needClearAll = true
 const indicatorPeriod = 1000 / 4
@@ -14,13 +10,24 @@ const userInputBlocksTimeWidth = 20
 const secIndicatorHalfHeight = 5
 const stopTimeLogScale = 10
 const tapLineHalfHeight = blocksHalfHeight * 6
+let textY = 0
+const textHeight = 80
+let textGradiant = null
+function init ({context}) {
+  ctx = context
+  handleResize()
+}
 function handleResize () {
   let {width, height} = ctx.canvas
   freeModeBackground = ctx.createLinearGradient(0, 0, 0, height)
   freeModeBackground.addColorStop(0, '#fffeb3')
   freeModeBackground.addColorStop(1, '#ffe28a')
+  textGradiant = ctx.createLinearGradient(0, textY, 0, textHeight)
+  textGradiant.addColorStop(0, '#666547')
+  textGradiant.addColorStop(1, '#fb2e01')
   secIndicaterY = height * (2/3)
   blocksY = height * (1/3)
+  textY = height / 8
   lastSize = {width, height}
   needClearAll = true
 }
@@ -53,6 +60,7 @@ function update ({nextFrame, state}) {
     } else {
       ctx.fillRect(0, secIndicaterY - secIndicatorHalfHeight * 3, width, secIndicatorHalfHeight * 6)
       ctx.fillRect(0, blocksY - blocksHalfHeight * 2, width, blocksHalfHeight * 4)
+      ctx.fillRect(0, textY, width, textHeight)
     }
   ctx.restore()
   drawIndicator()
@@ -176,6 +184,21 @@ function update ({nextFrame, state}) {
         }
       ctx.restore()
       needClearAll = true
+    }
+
+    if (fm.periodDeterminedTime !== null) {
+      let prog = Math.max(0, Math.min(1, (Date.now() - fm.periodDeterminedTime) / 300))
+      ctx.save()
+        ctx.fillStyle = textGradiant
+        ctx.globalAlpha = prog
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.font = `${textHeight / 2 / 2}px sans-serif`
+        ctx.fillText(`${Math.round(1 / (fm.periods[0] / 1000) * 10) / 10} Hz (${Math.round(60000 / fm.periods[0] * 10) / 10} / min)`, width / 2, textY + textHeight / 2, width)
+        ctx.textBaseline = 'top'
+        ctx.font = `${textHeight / 2}px sans-serif`
+        ctx.fillText(state.score, width / 2, textY + textHeight / 2, width)
+      ctx.restore()
     }
   }
 }
