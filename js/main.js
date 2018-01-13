@@ -53,4 +53,4 @@ document.addEventListener('touchstart', evt => {
     let t = touches[0]
     stateTapHandler({x: t.clientX, y: t.clientY})
   }
-})
+}, {passive: false})
