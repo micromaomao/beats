@@ -13,7 +13,7 @@ module.exports = {
           presets: [
             ['env', {
               targets: {
-                browsers: ['last 1 versions'] // FIXME
+                browsers: ["last 10 versions", "safari >= 9"]
               }
             }]
           ]

@@ -5,20 +5,6 @@ require('babel-polyfill')
 import { init as stateInit, store, draw, onTap as stateTapHandler } from './state.js'
 let state = store
 
-function readFromLocalStorage () {
-  try {
-    let stateData = window.localStorage.getItem('state')
-    let parse = JSON.parse(stateData)
-    if (typeof parse === 'object') {
-      return parse
-    } else {
-      return false
-    }
-  } catch (e) {
-    return false
-  }
-}
-
 document.body.innerHTML = ''
 let canvas = document.createElement('canvas')
 document.body.appendChild(canvas)
