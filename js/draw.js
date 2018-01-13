@@ -27,12 +27,11 @@ function drawFreeMode ({state, nextFrame}) {
   nextFrame() // more stuff drawn by updateFreeMode
 }
 
-let perviousIndicatorPath = null
-let perviousBlockPaths = []
 const indicatorPeriod = 1000 / 4
 const secIndicatorWidth = 2
 const blocksHalfWidth = 5
 const blocksHalfHeight = 30
+const secIndicatorHalfHeight = 5
 function updateFreeMode ({nextFrame, redraw, lastDrawState, state}) {
   let {width, height} = ctx.canvas
   let now = Date.now()
@@ -45,70 +44,51 @@ function updateFreeMode ({nextFrame, redraw, lastDrawState, state}) {
   }
   let xOffset = (now - startTime) * timeBase
   let midX = width / 2
+  ctx.save()
+    ctx.fillStyle = freeModeBackground
+    ctx.fillRect(0, secIndicaterY - secIndicatorHalfHeight * 3, width, secIndicatorHalfHeight * 6)
+    ctx.fillRect(0, blocksY - blocksHalfHeight * 2, width, blocksHalfHeight * 4)
+  ctx.restore()
   drawIndicator()
   drawBlocks()
 
   function drawIndicator () {
     let indicatorTB = timeBase * indicatorPeriod
-    if (perviousIndicatorPath !== null) {
-      ctx.save()
-        ctx.strokeStyle = freeModeBackground
-        ctx.lineWidth = secIndicatorWidth * 3
-        ctx.lineCap = 'square'
-        ctx.fillStyle = 'transparent'
-        ctx.stroke(perviousIndicatorPath)
-      ctx.restore()
-      perviousIndicatorPath = null
-    }
     ctx.save()
       ctx.strokeStyle = '#666547'
       ctx.fillStyle = 'transparent'
       ctx.lineCap = 'butt'
       ctx.lineWidth = secIndicatorWidth
-      let path = new Path2D()
-      let redpath = new Path2D()
+      ctx.beginPath()
       for (let diX = midX - (xOffset % indicatorTB) - (Math.ceil(midX / indicatorTB) + 1) * indicatorTB; diX < width; diX += indicatorTB) {
         let thisTime = (diX - midX + xOffset) / timeBase + 0.001
         if (thisTime < 0) continue
-        let extend = 0
+        let extend = 1
         if (Math.abs(thisTime / 1000 - Math.round(thisTime / 1000)) < 0.001) {
-          extend = 5
+          extend = 2
         }
-        path.moveTo(diX, secIndicaterY - 5 - extend)
-        path.lineTo(diX, secIndicaterY + 5 + extend)
+        ctx.moveTo(diX, secIndicaterY - secIndicatorHalfHeight * extend)
+        ctx.lineTo(diX, secIndicaterY + secIndicatorHalfHeight * extend)
       }
-      ctx.stroke(path)
-      perviousIndicatorPath = path
+      ctx.stroke()
     ctx.restore()
   }
 
   function drawBlocks () {
-    for (let p of perviousBlockPaths) {
-      ctx.save()
-        ctx.fillStyle = freeModeBackground
-        ctx.strokeStyle = freeModeBackground
-        ctx.lineWidth = 2
-        ctx.fill(p)
-        ctx.stroke(p)
-      ctx.restore()
-    }
-    perviousBlockPaths = []
-
     let fm = state.freeMode
     let timeOffset = now - startTime
-    let userBlockPath = new Path2D()
-    for (let b of fm.userInputBlocks) {
-      let x = b * timeBase - xOffset + midX
-      if (x < 0 || x >= width) continue
-      userBlockPath.rect(x - blocksHalfWidth, blocksY - blocksHalfHeight, blocksHalfWidth * 2, blocksHalfHeight * 2)
-    }
     ctx.save()
+      ctx.beginPath()
+      for (let b of fm.userInputBlocks) {
+        let x = b * timeBase - xOffset + midX
+        if (x < 0 || x >= width) continue
+        ctx.rect(x - blocksHalfWidth, blocksY - blocksHalfHeight, blocksHalfWidth * 2, blocksHalfHeight * 2)
+      }
       ctx.fillStyle = '#6fcb9f'
       ctx.strokeStyle = 'transparent'
       ctx.lineWidth = 0
-      ctx.fill(userBlockPath)
+      ctx.fill()
     ctx.restore()
-    perviousBlockPaths.push(userBlockPath)
 
     let blockperiod = 200
     if (fm.periods && fm.periods.length > 0) {
@@ -121,11 +101,10 @@ function updateFreeMode ({nextFrame, redraw, lastDrawState, state}) {
       for (let b of fm.blocks) {
         let x = b.t * timeBase - xOffset + midX
         if (x < 0 || x >= width) continue
-        let blockPath = new Path2D()
-        blockPath.rect(x - blocksHalfWidth, blocksY - blocksHalfHeight, blocksHalfWidth * 2, blocksHalfHeight * 2)
+        ctx.beginPath()
+        ctx.rect(x - blocksHalfWidth, blocksY - blocksHalfHeight, blocksHalfWidth * 2, blocksHalfHeight * 2)
         ctx.globalAlpha = Math.max(Math.min(1, (now - b.appearTime) / blockperiod), 0)
-        ctx.fill(blockPath)
-        perviousBlockPaths.push(blockPath)
+        ctx.fill()
       }
     ctx.restore()
   }
