@@ -72,7 +72,7 @@ let store = createStore(function (state, action) {
               successful: false
             }
           }
-        } else if (fm.stopTime !== null) {
+        } else if (fm.stopTime !== null && Date.now() - fm.stopTime > 1000) {
           state.showInitScreen = false
           state.score = 0
           state.freeMode = Object.assign({}, freeModeInit, {

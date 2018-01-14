@@ -227,15 +227,17 @@ function update ({nextFrame, state}) {
     if (stopTime !== null) {
       needClearAll = true
       let prog = Math.min(1, stopTimePass / 300)
+      let clickProg = Math.min(1, Math.max(0, (stopTimePass - 1000) / 1000))
       ctx.save()
         ctx.fillStyle = textGradiant
         ctx.textAlign = 'center'
         ctx.textBaseline = 'bottom'
         ctx.font = '20px sans-serif'
-        ctx.globalAlpha = prog
+        ctx.globalAlpha = clickProg
         ctx.fillText('Click / Tap anywhere to play again.', width / 2, (blocksY + secIndicaterY) / 2, width)
         ctx.textBaseline = 'top'
         ctx.font = '18px sans-serif'
+        ctx.globalAlpha = prog
         ctx.fillText(`Best score: ${state.maxScore}`, width / 2, (blocksY + secIndicaterY) / 2 + 5, width)
       ctx.restore()
     }
