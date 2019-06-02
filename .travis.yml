@@ -1,0 +1,21 @@
+sudo: no
+dist: stretch
+group: edge
+language: node_js
+node_js:
+  - "10"
+
+script:
+  - >
+    npm install &&
+    echo node_modules > .gitignore &&
+    mv dist/* . &&
+    rmdir dist
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $GH_KEY
+  keep-history: false
+  on:
+    branch: master
